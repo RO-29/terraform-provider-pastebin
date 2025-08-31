@@ -1,0 +1,4 @@
+build/
+gpg-private-key.asc
+gpg-public-key.asc
+pastebin-pat.key

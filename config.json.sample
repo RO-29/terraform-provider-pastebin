@@ -1,0 +1,18 @@
+{
+  "bin": [
+    {
+      "burn-after-reading": false,
+      "expire": "1week",
+      "formatter": "markdown",
+      "gzip": true,
+      "host": "https://pastebin.example.tech",
+      "name": "sample",
+      "open-discussion": false
+    }
+  ],
+  "burn-after-reading": false,
+  "expire": "1week",
+  "formatter": "markdown",
+  "gzip": true,
+  "open-discussion": false
+}
