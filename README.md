@@ -12,19 +12,7 @@ This Terraform provider allows you to manage pastebin pastes as infrastructure r
 
 ## Installation
 
-### From Source
-
-1. Build the provider:
-   ```bash
-   make build-terraform
-   ```
-
-2. Install locally for development:
-   ```bash
-   make install-terraform-provider
-   ```
-
-### Using the Provider
+### From Terraform Registry
 
 Add the provider to your Terraform configuration:
 
@@ -32,11 +20,30 @@ Add the provider to your Terraform configuration:
 terraform {
   required_providers {
     pastebin = {
-      source = "RO-29/pastebin"
+      source  = "RO-29/pastebin"
+      version = "~> 1.0"
     }
   }
 }
 ```
+
+### From Source (Development)
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/RO-29/terraform-provider-pastebin.git
+   cd terraform-provider-pastebin
+   ```
+
+2. Build the provider:
+   ```bash
+   make build
+   ```
+
+3. Install locally for development:
+   ```bash
+   make install-terraform-provider
+   ```
 
 ## Configuration
 
@@ -188,23 +195,159 @@ output "content" {
 }
 ```
 
+### Advanced Usage
+
+#### Managing Configuration Files
+
+```hcl
+# Store application configuration
+resource "pastebin_paste" "app_config" {
+  content = jsonencode({
+    environment = var.environment
+    database_url = var.database_url
+    api_keys = {
+      stripe = var.stripe_api_key
+    }
+  })
+  password           = var.config_password
+  expire             = "1month"
+  burn_after_reading = false
+  formatter          = "syntaxhighlighting"
+}
+
+# Retrieve and use the configuration
+data "pastebin_paste" "current_config" {
+  url      = pastebin_paste.app_config.url
+  password = var.config_password
+}
+
+locals {
+  config = jsondecode(data.pastebin_paste.current_config.content)
+}
+```
+
+#### Sharing Build Artifacts
+
+```hcl
+# Upload build logs
+resource "pastebin_paste" "build_log" {
+  content           = file("${path.module}/build.log")
+  attachment_name   = "build-${timestamp()}.log"
+  expire           = "1week"
+  open_discussion  = true
+  gzip            = true
+}
+
+# Share compressed archives
+resource "pastebin_paste" "release_archive" {
+  content         = filebase64("${path.module}/dist/app-v${var.version}.tar.gz")
+  attachment_name = "app-v${var.version}.tar.gz"
+  expire          = "1year"
+}
+```
+
 ## Development
 
-To contribute to this provider:
+### Prerequisites
 
-1. Build and test:
+- [Go](https://golang.org/doc/install) 1.23+ 
+- [Terraform](https://developer.hashicorp.com/terraform/downloads) 1.0+
+
+### Building and Testing
+
+1. Clone the repository:
    ```bash
-   make build-terraform
+   git clone https://github.com/RO-29/terraform-provider-pastebin.git
+   cd terraform-provider-pastebin
+   ```
+
+2. Build the provider:
+   ```bash
+   make build
+   ```
+
+3. Install locally for testing:
+   ```bash
    make install-terraform-provider
    ```
 
-2. Run examples:
+4. Run tests:
    ```bash
-   cd terraform/examples
-   terraform init
-   terraform plan
+   make test           # Unit tests
+   make test-coverage  # With coverage report
+   make testacc        # Acceptance tests (requires TF_ACC=1)
    ```
+
+### Testing Your Changes
+
+After making changes, test with a minimal Terraform configuration:
+
+```hcl
+terraform {
+  required_providers {
+    pastebin = {
+      source = "RO-29/pastebin"
+    }
+  }
+}
+
+provider "pastebin" {
+  host = "https://pastebin.example.tech"
+}
+
+resource "pastebin_paste" "test" {
+  content = "Test paste from Terraform!"
+  expire  = "1day"
+}
+
+output "paste_url" {
+  value = pastebin_paste.test.url
+}
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Provider not found**: Ensure you've specified the correct source in your `required_providers` block:
+   ```hcl
+   terraform {
+     required_providers {
+       pastebin = {
+         source  = "RO-29/pastebin"
+         version = "~> 1.0"
+       }
+     }
+   }
+   ```
+
+2. **Authentication errors**: Verify your host URL and credentials:
+   - Check that `PASTEBIN_HOST` environment variable or `host` provider attribute is set correctly
+   - For authenticated instances, ensure `PASTEBIN_USERNAME` and `PASTEBIN_PASSWORD` are set
+
+3. **TLS certificate errors**: For self-hosted pastebin instances with self-signed certificates:
+   ```hcl
+   provider "pastebin" {
+     host            = "https://pastebin.internal.company.com"
+     skip_tls_verify = true  # Use only for testing/development
+   }
+   ```
+
+4. **Build issues**: If you encounter build problems:
+   - Ensure Go 1.23+ is installed
+   - Check that all dependencies are available: `go mod download`
+   - Clean build artifacts: `make clean && make build`
+
+### Getting Help
+
+- Check existing [issues](https://github.com/RO-29/terraform-provider-pastebin/issues) 
+- Review the [pastebin-go-cli documentation](https://github.com/RO-29/pastebin-go-cli) for API-related questions
+- Create a new issue with:
+  - Terraform version (`terraform version`)
+  - Provider version
+  - Minimal reproduction case
+  - Full error messages
 
 ## License
 
-This provider is part of the  project and follows the same license terms.
+This project is licensed under the same terms as the [pastebin-go-cli](https://github.com/RO-29/pastebin-go-cli) library it depends on.

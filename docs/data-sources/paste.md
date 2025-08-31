@@ -13,25 +13,58 @@ Reads an existing pastebin paste. This data source allows you to retrieve the co
 
 ```terraform
 # Read a public paste
-data "pastebin_paste" "example" {
+data "pastebin_paste" "public_config" {
   url = "https://pastebin.example.tech/?abcd1234#EezApNVTTRUuEkt1jj7r9vSfewLBvUohDSXWuvPEs1bF"
 }
 
 # Read a password-protected paste
-data "pastebin_paste" "protected" {
+data "pastebin_paste" "protected_secret" {
   url      = "https://pastebin.example.tech/?efgh5678#FfzBqOWUUSVvFlu2kk8s0wTgfxMCwVpiETYXvwQFt2cG"
   password = var.paste_password
 }
 
 # Read a burn-after-reading paste (with confirmation)
-data "pastebin_paste" "burn_after_reading" {
+data "pastebin_paste" "one_time_secret" {
   url          = "https://pastebin.example.tech/?ijkl9012#-GgzCrPVVTWwGmv3ll9t1xUhgyNDxWqjFUZYwxRGu3dH"
-  confirm_burn = true # This will delete the paste after reading
+  confirm_burn = true # WARNING: This will delete the paste after reading
 }
 
-# Use the data in outputs
+# Use the data to create a new paste with modified content
+resource "pastebin_paste" "modified_config" {
+  content = replace(data.pastebin_paste.public_config.content, "old_value", "new_value")
+  expire  = "1week"
+}
+
+# Use attachment data from an existing paste
+data "pastebin_paste" "attachment_source" {
+  url = "https://pastebin.example.tech/?mnop3456#GgzArPVUTWuGmv2ll8t2xUhgxNCxWpjFTZXwxRFu3dG"
+}
+
+# Create a new attachment from existing one
+resource "pastebin_paste" "attachment_copy" {
+  content         = data.pastebin_paste.attachment_source.attachment_data
+  attachment_name = "copy_${data.pastebin_paste.attachment_source.attachment_name}"
+  expire          = "1month"
+}
+
+# Output various paste properties
 output "paste_content" {
-  value = data.pastebin_paste.example.content
+  description = "The content of the retrieved paste"
+  value       = data.pastebin_paste.public_config.content
+}
+
+output "paste_comment_count" {
+  description = "Number of comments on the paste"
+  value       = data.pastebin_paste.public_config.comment_count
+}
+
+output "attachment_info" {
+  description = "Information about attachment if paste is an attachment"
+  value = data.pastebin_paste.attachment_source.attachment_name != "" ? {
+    name      = data.pastebin_paste.attachment_source.attachment_name
+    mime_type = data.pastebin_paste.attachment_source.mime_type
+    size      = length(data.pastebin_paste.attachment_source.attachment_data)
+  } : null
 }
 ```
 

@@ -12,7 +12,7 @@ Creates and manages a pastebin paste. This resource allows you to create pastes 
 ## Example Usage
 
 ```terraform
-# Basic paste
+# Basic text paste
 resource "pastebin_paste" "example" {
   content = "Hello, World!"
   expire  = "1day"
@@ -23,21 +23,41 @@ resource "pastebin_paste" "code" {
   content   = file("${path.module}/script.py")
   formatter = "syntaxhighlighting"
   expire    = "1month"
+  gzip      = true  # Compress for better performance
 }
 
-# Password-protected paste
+# Markdown formatted paste
+resource "pastebin_paste" "docs" {
+  content   = file("${path.module}/README.md")
+  formatter = "markdown"
+  expire    = "1week"
+  open_discussion = true  # Allow comments
+}
+
+# Password-protected paste with burn-after-reading
 resource "pastebin_paste" "secret" {
-  content            = "Sensitive information"
+  content            = "Sensitive configuration data"
   password           = var.paste_password
   burn_after_reading = true
   expire             = "1hour"
+  gzip              = true
 }
 
-# Attachment paste
+# Binary attachment paste
 resource "pastebin_paste" "document" {
   content         = filebase64("${path.module}/document.pdf")
   attachment_name = "document.pdf"
   expire          = "1week"
+}
+
+# Configuration snippet with custom expiration
+resource "pastebin_paste" "config" {
+  content   = templatefile("${path.module}/config.tpl", {
+    environment = var.environment
+    version     = var.app_version
+  })
+  formatter = "syntaxhighlighting"
+  expire    = "1month"
 }
 ```
 
